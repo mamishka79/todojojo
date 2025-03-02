@@ -54,7 +54,7 @@ async def start_cmd(message: Message):
     username = message.from_user.username
 
     if add_user(message.from_user.id, message.from_user.full_name, username):
-        await message.answer("👋 Привет! Ты зарегистрирован.", reply_markup=solo_kb)
+        await message.answer("👋 Привет! Ты успешно зарегистрирован. Как только наберёшь 120 очков, сможешь активировать групповой режим и работать с друзьями!", reply_markup=solo_kb)
     else:
         await message.answer("Ты уже зарегистрирован!", reply_markup=solo_kb)
 
