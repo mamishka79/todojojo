@@ -1,11 +1,4 @@
 {
-    "1982583714": {
-        "name": "\u0410\u043c\u0438\u0440",
-        "points": 0,
-        "completed_tasks": 0,
-        "group_access": false,
-        "username": "agentPi314"
-    },
     "8134193141": {
         "name": "shazia Azimi",
         "username": "",
@@ -33,5 +26,13 @@
         "points": 0,
         "completed_tasks": 0,
         "group_access": false
+    },
+    "1982583714": {
+        "name": "\u0410\u043c\u0438\u0440",
+        "username": "agentPi314",
+        "points": 10,
+        "completed_tasks": 0,
+        "group_access": false,
+        "language": "en"
     }
 }
