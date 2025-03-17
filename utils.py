@@ -37,7 +37,8 @@ def add_user(user_id, full_name, username):
             "username": username or "",
             "points": 0,
             "completed_tasks": 0,
-            "group_access": False
+            "group_access": False,
+            "language": "ru"  # добавлено поле языка с дефолтным значением "ru"
         }
         save_json(USERS_FILE, users)
         return True
@@ -83,7 +84,6 @@ def delete_task(user_id, task_index):
         save_json(TASKS_FILE, tasks)
         return True
     return False
-
 
 def edit_task(user_id, task_index, new_text):
     tasks = load_json(TASKS_FILE)

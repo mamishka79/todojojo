@@ -3,7 +3,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeAllGroupChats
 from config import TOKEN
-from handlers import solo, group, points, reports
+from handlers import solo, group, points, reports, shop, language, admin
 
 logging.basicConfig(level=logging.INFO)
 
@@ -14,6 +14,9 @@ dp.include_router(solo.router)
 dp.include_router(group.router)
 dp.include_router(points.router)
 dp.include_router(reports.router)
+dp.include_router(shop.router)
+dp.include_router(language.router)
+dp.include_router(admin.router)
 
 async def main():
     # Команды для личных (solo) чатов – без команды leaderboard
