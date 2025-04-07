@@ -181,12 +181,14 @@ async def add_task_cmd(message: Message, state: FSMContext):
 
 @router.message(TaskState.add)
 async def process_add_task(message: Message, state: FSMContext):
+    # Обновим активность
     update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
-    lang = user["language"]
-    raw = message.text.strip()
+    lang = user["language"] if user else "ru"
 
-    # Разделяем и по переносам, и по ';'
+    raw = message.text.strip()
+    # Разделяем вход на строки (или на ; )
+    # так же, как было раньше
     lines = []
     for line in raw.split('\n'):
         if ';' in line:
@@ -198,23 +200,65 @@ async def process_add_task(message: Message, state: FSMContext):
             if line.strip():
                 lines.append(line.strip())
 
+    # Если после всех разделений нет строк – ошибка
     if not lines:
         await message.answer(get_translation(lang, "task_length_error"))
         return
 
-    added = []
-    for t in lines:
-        if 3 <= len(t) <= 100:
-            add_task(message.from_user.id, t)
-            added.append(t)
-    if added:
-        if len(added) == 1:
+    added_tasks = []
+    for line in lines:
+        # Попробуем распарсить 3 части: 
+        #   text | deadline | status
+        parts = [p.strip() for p in line.split('|')]
+        
+        # Минимум 1 часть (текст)
+        text = parts[0] if len(parts) >= 1 else ""
+        deadline = parts[1] if len(parts) >= 2 else ""
+        status = parts[2] if len(parts) >= 3 else ""
+
+        # Если нет текста или текст слишком короткий - пропускаем
+        if len(text) < 3 or len(text) > 100:
+            continue
+        
+        # Установим статус по умолчанию, если не задан
+        if not status:
+            status = "Новая" if lang == "ru" else "New"
+
+        # Проверим формат дедлайна (если пользователь ввёл)
+        # Не обязательно, но полезно
+        if deadline:
+            from datetime import datetime
+            try:
+                datetime.strptime(deadline, "%Y-%m-%d %H:%M")
+                # Если формат корректен, просто используем его
+            except ValueError:
+                # Если формат некорректен, можно проигнорировать дедлайн 
+                # или сказать пользователю, что дедлайн неверен
+                deadline = ""
+
+        # Теперь добавим задачу
+        add_task(
+            user_id=message.from_user.id,
+            task_text=text,
+            status=status,
+            deadline=deadline
+        )
+        added_tasks.append(text)
+
+    # После цикла, проверим сколько добавлено
+    if added_tasks:
+        if len(added_tasks) == 1:
+            # Если ровно одна
             await message.answer(get_translation(lang, "task_added"))
         else:
-            await message.answer("✅ Добавлено задач: " + ", ".join(added[:5]))
+            # Если несколько
+            joined = ", ".join(added_tasks[:5])
+            await message.answer(f"✅ Добавлено задач: {len(added_tasks)}. Пример: {joined}")
     else:
+        # Если в итоге ни одной задачи не прошло валидацию
         await message.answer(get_translation(lang, "task_length_error"))
 
+    # Сбросим состояние
     await state.clear()
 
 @router.message(F.text.in_(["📋 Мои задачи", "📋 My Tasks"]))
