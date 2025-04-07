@@ -1,38 +1,42 @@
 from aiogram import Router, F
 from aiogram.types import Message
-from datetime import datetime, timedelta
-from utils import ADMIN_IDS, load_json, save_json, USERS_FILE
+from utils import ADMIN_IDS, load_json, get_user  # или как у вас функции называются
 
 router = Router()
 
-@router.message(F.text == "/remind_inactive")
-async def remind_inactive_cmd(message: Message):
+@router.message(F.text.startswith("/dm "))
+async def dm_user_cmd(message: Message):
+    """ Отправляет личное сообщение конкретному пользователю. 
+        Формат: /dm <user_id> <текст сообщения>
+    """
     if message.from_user.id not in ADMIN_IDS:
         await message.answer("Access denied")
         return
 
-    users = load_json(USERS_FILE)
-    now = datetime.now()
-    threshold = now - timedelta(days=7)  # Неактивны 7+ дней
-    reminded_count = 0
+    parts = message.text.split(maxsplit=2)
+    if len(parts) < 3:
+        await message.answer("Использование: /dm <user_id> <текст>")
+        return
 
-    for uid_str, data in users.items():
-        last_act_str = data.get("last_activity", "")
-        if not last_act_str:
-            continue
-        try:
-            last_act = datetime.strptime(last_act_str, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            continue
-        if last_act < threshold:
-            name = data["name"]
-            text = (f"Привет, {name}! Мы заметили, что вы давно не заходили в бота.\n"
-                    "Проверьте, не осталось ли у вас незавершённых задач — или создайте новые!\n"
-                    "Мы добавили несколько полезных функций, возвращайтесь! 😉")
-            try:
-                await message.bot.send_message(int(uid_str), text)
-                reminded_count += 1
-            except:
-                pass
+    user_id_str = parts[1]
+    text_to_send = parts[2]
 
-    await message.answer(f"Напоминания отправлены {reminded_count} пользователям.")
+    # Попробуем преобразовать user_id в int
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        await message.answer("user_id должно быть числом (ID пользователя).")
+        return
+
+    # Проверим, зарегистрирован ли этот пользователь
+    users = load_json("data/users.json")  # Или используйте вашу функцию get_user()
+    if str(user_id) not in users:
+        await message.answer(f"Пользователь с ID {user_id} не найден в базе.")
+        return
+
+    # Пробуем отправить сообщение в личку
+    try:
+        await message.bot.send_message(chat_id=user_id, text=text_to_send)
+        await message.answer(f"Сообщение отправлено пользователю {user_id}.")
+    except Exception as e:
+        await message.answer(f"Ошибка отправки сообщения: {e}")
