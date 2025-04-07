@@ -1,6 +1,6 @@
 from aiogram import Router, F
 from aiogram.types import Message
-from utils import get_user, update_user
+from utils import get_user, update_user, update_last_activity
 
 router = Router()
 
@@ -34,16 +34,17 @@ def get_translation(lang, key, **kwargs):
 
 @router.message(F.text == "/shop")
 async def shop_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     if not user:
         await message.answer(get_translation(lang, "shop_not_registered"))
         return
-
     await message.answer(get_translation(lang, "shop_menu"))
 
 @router.message(F.text.startswith("/buy "))
 async def buy_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     if not user:

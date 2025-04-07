@@ -3,7 +3,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeAllGroupChats
 from config import TOKEN
-from handlers import solo, group, points, reports, shop, language, admin
+from handlers import solo, group, points, reports, shop, language, admin, reminders
 
 logging.basicConfig(level=logging.INFO)
 
@@ -17,9 +17,9 @@ dp.include_router(reports.router)
 dp.include_router(shop.router)
 dp.include_router(language.router)
 dp.include_router(admin.router)
+dp.include_router(reminders.router)  # новый router для напоминаний / реактивации
 
 async def main():
-    # Команды для личных (solo) чатов – без команды leaderboard
     await bot.set_my_commands(
         [
             BotCommand(command="start", description="Запустить бота"),
@@ -29,7 +29,6 @@ async def main():
         scope=BotCommandScopeAllPrivateChats()
     )
 
-    # Команды для групповых чатов – команды группового режима
     await bot.set_my_commands(
         [
             BotCommand(command="help_group", description="Инструкции для группового режима"),

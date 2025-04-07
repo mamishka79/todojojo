@@ -3,12 +3,14 @@ import json
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
-from utils import get_user, update_user, load_json, save_json, add_user
+from utils import (
+    get_user, update_user, load_json, save_json, add_user,
+    update_last_activity
+)
 
 router = Router()
 
 GROUPS_FILE = "data/groups.json"
-
 if not os.path.exists(GROUPS_FILE):
     with open(GROUPS_FILE, "w", encoding="utf-8") as f:
         json.dump({}, f)
@@ -223,7 +225,7 @@ def get_translation(lang, key, **kwargs):
 
 @router.message(Command("start_group"))
 async def start_group_cmd(message: Message):
-    # Регистрируем пользователя, если он ещё не зарегистрирован
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     if not user:
         add_user(message.from_user.id, message.from_user.full_name, message.from_user.username)
@@ -258,6 +260,7 @@ async def start_group_cmd(message: Message):
 
 @router.message(Command("help_group"))
 async def help_group_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     help_text = get_translation(lang, "help_group")
@@ -265,6 +268,7 @@ async def help_group_cmd(message: Message):
 
 @router.message(Command("join_group"))
 async def join_group_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     groups = get_groups()
@@ -279,12 +283,13 @@ async def join_group_cmd(message: Message):
 
     groups[chat_id]["users"].append(message.from_user.id)
     save_groups(groups)
-    if not get_user(message.from_user.id):
+    if not user:
         add_user(message.from_user.id, message.from_user.full_name, message.from_user.username)
     await message.answer(get_translation(lang, "join_group_success"))
 
 @router.message(Command("add_task"))
 async def add_group_task_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     groups = get_groups()
@@ -311,6 +316,7 @@ async def add_group_task_cmd(message: Message):
 
 @router.message(Command("group_tasks"))
 async def group_tasks_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     groups = get_groups()
@@ -328,14 +334,15 @@ async def group_tasks_cmd(message: Message):
         return
 
     task_list = "\n".join(
-        f"{i+1}. {'✅' if task['done'] else '❌'} {task['task']} " +
-        (get_translation(lang, "by", name=get_user(task['creator'])['name']))
+        f"{i+1}. {'✅' if task['done'] else '❌'} {task['task']} "
+        f"{get_translation(lang, 'by', name=get_user(task['creator'])['name'])}"
         for i, task in enumerate(tasks)
     )
     await message.answer(f"{get_translation(lang, 'group_tasks_header')}{task_list}")
 
 @router.message(Command("group_tasks_by"))
 async def group_tasks_by_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     groups = get_groups()
@@ -384,6 +391,7 @@ async def group_tasks_by_cmd(message: Message):
 
 @router.message(Command("done"))
 async def group_done_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     groups = get_groups()
@@ -415,12 +423,12 @@ async def group_done_cmd(message: Message):
     if message.from_user.id in confirmations:
         await message.answer(get_translation(lang, "done_already_confirmed"))
         return
-    else:
-        confirmations.append(message.from_user.id)
+    confirmations.append(message.from_user.id)
     if len(set(confirmations)) >= (len(groups[chat_id]["users"]) + 1) // 2:
         groups[chat_id]["tasks"][task_index]["done"] = True
         for user_id in groups[chat_id]["users"]:
-            update_user(user_id, "points", get_user(user_id)["points"] + 5)
+            existing = get_user(user_id)
+            update_user(user_id, "points", existing["points"] + 5)
         await message.answer(get_translation(lang, "done_completed", task=task["task"]))
     else:
         await message.answer(get_translation(lang, "done_waiting"))
@@ -428,6 +436,7 @@ async def group_done_cmd(message: Message):
 
 @router.message(Command("edit_task"))
 async def edit_group_task_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     groups = get_groups()
@@ -438,6 +447,7 @@ async def edit_group_task_cmd(message: Message):
     if message.from_user.id not in groups[chat_id]["users"]:
         await message.answer(get_translation(lang, "join_group_not_active"))
         return
+
     parts = message.text.split(maxsplit=2)
     if len(parts) < 3:
         await message.answer(get_translation(lang, "edit_task_usage"))
@@ -464,6 +474,7 @@ async def edit_group_task_cmd(message: Message):
 
 @router.message(Command("delete_task"))
 async def delete_group_task_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     groups = get_groups()
@@ -498,6 +509,7 @@ async def delete_group_task_cmd(message: Message):
 
 @router.message(Command("group_members"))
 async def group_members_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     groups = get_groups()
@@ -515,14 +527,15 @@ async def group_members_cmd(message: Message):
         return
 
     members_text = "\n".join(
-        f"{i + 1}. {get_user(member)['name']} " +
-        (f"(@{get_user(member)['username']})" if get_user(member).get('username') else "")
+        f"{i + 1}. {get_user(member)['name']} "
+        f"(@{get_user(member)['username']})" if get_user(member).get('username') else f"{i + 1}. {get_user(member)['name']}"
         for i, member in enumerate(members)
     )
     await message.answer(f"{get_translation(lang, 'group_members_header')}{members_text}")
 
 @router.message(Command("leave_group"))
 async def leave_group_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     groups = get_groups()

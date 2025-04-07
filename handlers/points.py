@@ -1,9 +1,8 @@
 from aiogram import Router, F
 from aiogram.types import Message
-from utils import load_json, get_user
+from utils import load_json, get_user, update_last_activity
 
 router = Router()
-
 
 def get_translation(lang, key, **kwargs):
     translations = {
@@ -21,9 +20,9 @@ def get_translation(lang, key, **kwargs):
         text = text.format(**kwargs)
     return text
 
-
 @router.message(F.text.in_(["🏆 Рейтинг", "🏆 Leaderboard"]))
 async def leaderboard_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
     users = load_json("data/users.json")

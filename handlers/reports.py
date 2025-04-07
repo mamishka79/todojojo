@@ -1,7 +1,7 @@
 from aiogram import Router
 from aiogram.types import Message
 from aiogram.filters import Command
-from utils import add_report, load_json, get_user
+from utils import add_report, load_json, get_user, update_last_activity
 
 router = Router()
 
@@ -35,6 +35,7 @@ def get_translation(lang, key, **kwargs):
 
 @router.message(Command("report"))
 async def report_cmd(message: Message):
+    update_last_activity(message.from_user.id)
     user = get_user(message.from_user.id)
     lang = user.get("language", "ru") if user else "ru"
 

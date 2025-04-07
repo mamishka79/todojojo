@@ -20,10 +20,8 @@ async def language_menu(message: Message):
 async def language_callback(callback: CallbackQuery):
     lang_code = "ru" if callback.data == "set_lang_ru" else "en"
     update_user(callback.from_user.id, "language", lang_code)
-    # Импортируем локально функцию для генерации клавиатуры из solo.py, чтобы избежать циклического импорта
     from handlers.solo import get_solo_keyboard
     new_keyboard = get_solo_keyboard(lang_code)
-    # Отправляем сообщение с обновлённой клавиатурой
     await callback.message.answer(
         f"Язык изменён на {'Русский' if lang_code == 'ru' else 'English'}. Интерфейс обновлён.",
         reply_markup=new_keyboard
