@@ -272,6 +272,7 @@ async def my_tasks(message: Message):
         await message.answer(get_translation(lang, "no_tasks"))
         return
 
+    # Разделим на невыполненные (incomplete) и выполненные (completed)
     incomplete_tasks = []
     completed_tasks = []
     for i, task in enumerate(tasks):
@@ -280,35 +281,66 @@ async def my_tasks(message: Message):
         else:
             incomplete_tasks.append((i, task))
 
-    display_text = ""
+    # Подготовим итоговый текст
+    # Используем код-блоки Markdown: ``` ... ```
+    # В них все символы идут моноширинным шрифтом, и таблица выглядит ровнее
+
+    result_lines = []
+    # Заголовок
+    header_incomplete = "❌ Не выполненные задачи:\n" if lang == "ru" else "❌ Incomplete Tasks:\n"
+    header_completed = "✅ Выполненные задачи:\n" if lang == "ru" else "✅ Completed Tasks:\n"
+
+    # 1) Блок невыполненных задач (если есть)
     if incomplete_tasks:
-        if lang == "en":
-            display_text += "❌ Incomplete Tasks:\n"
+        result_lines.append(header_incomplete)
+        # Открываем тройные бэктики + перенос строки
+        result_lines.append("```\n")
+        # Шапку таблицы (необязательно)
+        # № | Текст                 | Статус    | Дедлайн
+        if lang == "ru":
+            result_lines.append(f"{'№':<3} | {'Текст':<30} | {'Статус':<12} | Дедлайн\n")
+            result_lines.append(f"{'-'*3}-+{'-'*30}-+{'-'*12}-+{'-'*15}\n")
         else:
-            display_text += "❌ Не выполненные задачи:\n"
+            result_lines.append(f"{'ID':<3} | {'Task':<30} | {'Status':<12} | Deadline\n")
+            result_lines.append(f"{'-'*3}-+{'-'*30}-+{'-'*12}-+{'-'*15}\n")
+        
+        # Сами строки
         for idx, task in incomplete_tasks:
-            st = task.get("status", "Новая")
+            num_str = str(idx + 1)
+            text = task["task"]
+            st = task.get("status", "N/A")
             dl = task.get("deadline", "")
-            display_text += f"{idx+1}. {task['task']} [{st}]"
-            if dl:
-                display_text += f" (deadline: {dl})"
-            display_text += "\n"
+            result_lines.append(f"{num_str:<3} | {text[:30]:<30} | {st[:12]:<12} | {dl[:15]:<15}\n")
 
+        # Закрываем тройные бэктики
+        result_lines.append("```\n")
+
+    # 2) Блок выполненных задач (если есть)
     if completed_tasks:
-        display_text += "\n"
-        if lang == "en":
-            display_text += "✅ Completed Tasks:\n"
+        result_lines.append("\n" + header_completed)
+        result_lines.append("```\n")
+        if lang == "ru":
+            result_lines.append(f"{'№':<3} | {'Текст':<30} | {'Статус':<12} | Дедлайн\n")
+            result_lines.append(f"{'-'*3}-+{'-'*30}-+{'-'*12}-+{'-'*15}\n")
         else:
-            display_text += "✅ Выполненные задачи:\n"
-        for idx, task in completed_tasks:
-            st = task.get("status", "Завершена")
-            dl = task.get("deadline", "")
-            display_text += f"{idx+1}. {task['task']} [{st}]"
-            if dl:
-                display_text += f" (deadline: {dl})"
-            display_text += "\n"
+            result_lines.append(f"{'ID':<3} | {'Task':<30} | {'Status':<12} | Deadline\n")
+            result_lines.append(f"{'-'*3}-+{'-'*30}-+{'-'*12}-+{'-'*15}\n")
 
-    await message.answer(f"{get_translation(lang, 'your_tasks')}{display_text}", parse_mode="Markdown")
+        for idx, task in completed_tasks:
+            num_str = str(idx + 1)
+            text = task["task"]
+            st = task.get("status", "N/A")  
+            dl = task.get("deadline", "")
+            result_lines.append(f"{num_str:<3} | {text[:30]:<30} | {st[:12]:<12} | {dl[:15]:<15}\n")
+
+        result_lines.append("```\n")
+
+    # Если нет ни одной задачи, это мы уже проверили выше
+    # Склеиваем все строки
+    output_text = get_translation(lang, "your_tasks") + "".join(result_lines)
+
+    # Отправляем с parse_mode="Markdown", чтобы тройные бэктики сработали
+    await message.answer(output_text, parse_mode="Markdown")
 
 @router.message(F.text.in_(["✅ Завершить задачу", "✅ Complete Task"]))
 async def done_task_cmd(message: Message, state: FSMContext):
